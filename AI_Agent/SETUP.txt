@@ -1,0 +1,51 @@
+AI Agent Setup Guide
+
+This project uses Ollama to run the AI model locally.
+Ollama and the Qwen model are NOT included in this repository.
+
+1. Install Ollama
+
+Linux / WSL:
+
+curl -fsSL https://ollama.com/install.sh | sh
+
+2. Start Ollama
+
+ollama serve
+
+Keep this terminal open while using the AI agent.
+
+3. Download the AI model
+
+Open another terminal and run:
+
+ollama pull qwen2.5:3b
+
+The model only needs to be downloaded once.
+
+4. Run the AI agent
+
+Go to the AI_Agent folder and run:
+
+python3 dutch_translation_agent.py
+
+5. Choose the input method
+
+1 - Paste article
+2 - Load article from articles folder
+
+If you choose option 1, paste the Dutch article and type:
+
+END
+
+on a new line when you are finished.
+
+If you choose option 2, place a .txt file inside the "articles" folder and select it from the list.
+
+Requirements:
+- Python 3
+- Ollama
+- qwen2.5:3b model
+
+No OpenAI API key is required.
+The AI model runs locally on your computer.
