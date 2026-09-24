@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 # Free local model running through Ollama.
-# If 7B is too slow for your computer, change this to "qwen2.5:3b".
+
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 OLLAMA_URL = os.getenv(
     "OLLAMA_URL",
