@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 # Free local model running through Ollama.
-# If 7B is too slow for your computer, change this to "qwen2.5:3b".
+
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 OLLAMA_URL = os.getenv(
     "OLLAMA_URL",
@@ -79,8 +79,14 @@ You are the Translator Agent.
 
 Translate the Dutch article into accurate and natural English.
 
+GDPR & Privacy Compliance:
+- Anonymize all personal identifiable information (PII):
+  - Replace real human full names with generic placeholders (e.g. "[Person A]", "[Author]", "[Subject]").
+  - Replace specific contact details (emails, phone numbers, home addresses) with "[REDACTED]".
+  - Keep public corporate or official organizational names intact if necessary for context.
+
 Rules:
-- Preserve all important facts, names, dates and numbers.
+- Preserve all facts, dates, context, and numbers.
 - Preserve the original meaning.
 - Do not summarize.
 - Do not add information.
@@ -96,6 +102,7 @@ You are the Language Simplifier Agent.
 Rewrite the English article so that it is suitable for a CEFR B1/B2 reader.
 
 Rules:
+- Keep all anonymized placeholders like [Person A] or [Subject] as they are. Do not try to guess or restore real names.
 - Keep exactly the same meaning and important information.
 - Prefer common and clear vocabulary.
 - Use reasonably short sentences.
@@ -117,6 +124,7 @@ Compare the Dutch original article with the proposed B1/B2 English version.
 Create the final corrected English article.
 
 Check internally that:
+- Strict Privacy/GDPR Rule: Real personal names MUST remain anonymized (e.g., [Person A]). Do NOT restore real human names from the original Dutch text.
 - the meaning of the Dutch original is preserved,
 - no important information is missing,
 - no information was invented,
