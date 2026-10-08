@@ -3,6 +3,7 @@ import os
 import urllib.error
 import urllib.request
 from pathlib import Path
+from file_saver_agent import FileSaverAgent
 
 
 # Free local model running through Ollama.
@@ -243,13 +244,27 @@ def main():
     try:
         article = read_article()
 
+        # Běh prvního agenta
         agent = DutchToEnglishAgent()
         result = agent.run(article)
+        final_text = result["final_translation"]
 
         print("\n" + "=" * 60)
         print("FINAL B1/B2 ENGLISH ARTICLE")
         print("=" * 60 + "\n")
-        print(result["final_translation"])
+        print(final_text)
+
+        # Otázka na člověka (Human Confirmation Gate)
+        print("\n" + "-" * 60)
+        confirm = input("Would you like FileSaverAgent to save this article? (Y/N): ").strip().upper()
+
+        if confirm == "Y":
+            # Spuštění druhého agenta z importovaného souboru
+            saver = FileSaverAgent()
+            path = saver.save(final_text)
+            print(f"[FileSaverAgent] Article saved successfully to: {path}")
+        else:
+            print("Action cancelled. Article was not saved.")
 
     except Exception as error:
         print(f"\nError: {error}")
