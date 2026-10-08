@@ -6,6 +6,7 @@ import urllib.request
 from pathlib import Path
 
 from file_saver_agent import FileSaverAgent
+from handbook_agent import HandbookAgent
 
 # Free local model running through Ollama.
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
@@ -241,7 +242,7 @@ def main():
     try:
         article = read_article()
 
-        # Spuštění prvního agenta
+        # 1. Běh překladatelského agenta
         agent = DutchToEnglishAgent()
         result = agent.run(article)
         final_text = result["final_translation"]
@@ -251,17 +252,32 @@ def main():
         print("=" * 60 + "\n")
         print(final_text)
 
-        # Člověk ve smyčce (Human confirmation gate)
+        # Inicializace proměnné před podmínkou
+        saved_file_name = None
+
+        # 2. Uložení přes FileSaverAgent
         print("\n" + "-" * 60)
         save_choice = input("Do you want to save this translation to a file? (Y/N): ").strip().upper()
 
         if save_choice == "Y":
-            # Spuštění druhého agenta
             saver = FileSaverAgent(output_dir="translated_articles")
             saved_path = saver.save(final_text)
+            saved_file_name = saved_path.name
             print(f"[FileSaverAgent] Translation successfully saved to: {saved_path}")
         else:
             print("Action skipped. Translation was not saved.")
+
+        # 3. Vytvoření handbooku přes HandbookAgent
+        print("\n" + "-" * 60)
+        handbook_choice = input("Do you want HandbookAgent to create a Handbook from this? (Y/N): ").strip().upper()
+
+        if handbook_choice == "Y":
+            hb_agent = HandbookAgent(input_dir="translated_articles", output_dir="handbooks")
+            # Pokud se soubor neuložil v předchozím kroku, načte se nejnovější existující soubor
+            hb_path = hb_agent.run(source_filename=saved_file_name)
+            print(f"[HandbookAgent] Handbook successfully created: {hb_path}")
+        else:
+            print("Action skipped. Handbook was not created.")
 
     except Exception as error:
         print(f"\nError: {error}")
