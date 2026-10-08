@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -18,8 +19,8 @@ class HandbookAgent:
     """
     Synthetic AI Agent that:
     1. Loads a translated article from translated_articles/.
-    2. Converts the content into a structured Handbook (Markdown).
-    3. Renders the Handbook to Markdown, print-ready HTML, and PDF.
+    2. Converts content into a structured 4-section executive Handbook.
+    3. Exports and saves strictly the final PDF document into handbooks/.
     """
 
     def __init__(self, model=MODEL, input_dir="translated_articles", output_dir="handbooks"):
@@ -89,7 +90,7 @@ IMPORTANT:
         return self._ask_ai(instructions, article_text)
 
     def markdown_to_html(self, markdown_text: str) -> str:
-        """Converts Markdown text into styled standalone HTML."""
+        """Converts Markdown text into styled HTML for PDF rendering."""
         body_elements = []
         in_table = False
         table_rows = []
@@ -100,7 +101,6 @@ IMPORTANT:
             if not line:
                 continue
 
-            # Table handling
             if line.startswith("|") and line.endswith("|"):
                 if re.match(r"^\|[\s\-:|]+\|$", line):
                     continue
@@ -119,7 +119,6 @@ IMPORTANT:
                     table_rows = []
                     in_table = False
 
-            # Headings and list elements
             if line.startswith("# "):
                 body_elements.append(f"<h1>{html.escape(line[2:])}</h1>")
             elif line.startswith("## "):
@@ -149,7 +148,7 @@ IMPORTANT:
         color: #1a202c;
         max-width: 820px;
         margin: 0 auto;
-        padding: 30px;
+        padding: 20px;
         line-height: 1.5;
         font-size: 13px;
     }}
@@ -200,18 +199,6 @@ IMPORTANT:
 </body>
 </html>"""
 
-    def export_pdf_file(self, html_path: Path, pdf_path: Path):
-        """Attempts to render PDF using system wkhtmltopdf if installed."""
-        try:
-            subprocess.run(
-                ["wkhtmltopdf", "--quiet", str(html_path), str(pdf_path)],
-                check=True
-            )
-            print(f"[HandbookAgent] PDF successfully created: {pdf_path}")
-        except (subprocess.SubprocessError, FileNotFoundError):
-            # Pokud wkhtmltopdf není nainstalován, nespadne
-            print(f"[HandbookAgent] Note: Run 'sudo apt install -y wkhtmltopdf' for auto-PDF conversion.")
-
     def run(self, source_filename: str = None) -> Path:
         if not self.input_dir.exists():
             raise FileNotFoundError(f"Directory '{self.input_dir}' does not exist.")
@@ -232,25 +219,34 @@ IMPORTANT:
         handbook_md = self.generate_handbook(article_content)
         handbook_md = re.sub(r"^(Here's|Here is).*?:\s*", "", handbook_md, flags=re.IGNORECASE).strip()
 
+        # Převod na HTML string
+        html_content = self.markdown_to_html(handbook_md)
+
+        # Cílová složka
         self.output_dir.mkdir(parents=True, exist_ok=True)
-
-        # 1. Uložit Markdown
-        md_path = self.output_dir / f"{file_path.stem}_handbook.md"
-        with open(md_path, "w", encoding="utf-8") as f:
-            f.write(handbook_md)
-
-        # 2. Uložit Styled HTML
-        html_path = self.output_dir / f"{file_path.stem}_handbook.html"
-        html_output = self.markdown_to_html(handbook_md)
-        with open(html_path, "w", encoding="utf-8") as f:
-            f.write(html_output)
-
-        # 3. Zkusit sestavit PDF
         pdf_path = self.output_dir / f"{file_path.stem}_handbook.pdf"
-        self.export_pdf_file(html_path, pdf_path)
 
-        print(f"[HandbookAgent] Handbook successfully saved to: {md_path}")
-        return md_path
+        print("[HandbookAgent] Compiling directly to PDF...")
+        # Vytvoření dočasného HTML souboru, který se po převodu ihned smaže
+        with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as temp_html:
+            temp_html.write(html_content)
+            temp_html_path = temp_html.name
+
+        try:
+            subprocess.run(
+                ["wkhtmltopdf", "--quiet", temp_html_path, str(pdf_path)],
+                check=True
+            )
+            print(f"[HandbookAgent] PDF successfully created: {pdf_path}")
+        except FileNotFoundError:
+            raise RuntimeError(
+                "wkhtmltopdf was not found. Install it by running: sudo apt update && sudo apt install -y wkhtmltopdf"
+            )
+        finally:
+            if os.path.exists(temp_html_path):
+                os.remove(temp_html_path)
+
+        return pdf_path
 
 
 if __name__ == "__main__":
