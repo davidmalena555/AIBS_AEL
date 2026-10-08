@@ -29,10 +29,9 @@ class DutchToEnglishAgent:
         self.model = model
 
     def anonymize_text(self, text: str) -> str:
-        # 1. E-maily
+
         text = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[REDACTED_EMAIL]', text)
 
-        # 2. Peněžní částky, platy a rozpočty
         currency_pattern = (
             r'(?:€|\$|£|CZK|EUR|USD)\s*\d+(?:[\.,\s]\d+)*(?:\s*(?:miljoen|miljard|million|billion|k))?'
             r'|\d+(?:[\.,\s]\d+)*\s*(?:€|\$|£|CZK|EUR|USD|euro|dollar|korun)'
@@ -40,11 +39,9 @@ class DutchToEnglishAgent:
         )
         text = re.sub(currency_pattern, '[CONFIDENTIAL_AMOUNT]', text, flags=re.IGNORECASE)
 
-        # 3. Telefonní čísla
         phone_pattern = r'(?:\+\d{1,3}[\s-]?)?\(?0?\d{1,4}\)?[\s.-]?\d{3}[\s.-]?\d{3,4}\b'
         text = re.sub(phone_pattern, '[REDACTED_PHONE]', text)
 
-        # 4. Názvy firem (hledáme až 3 slova před právní formou/typem instituce)
         company_pattern = (
             r'\b(?:[A-Z][a-zA-Z0-9&]*\s+){1,3}'
             r'(?:B\.V\.|N\.V\.|BV|NV|Ltd\.?|LLC|Inc\.?|Corp\.?|GmbH|Group|Holdings|Solutions|Logistics|Bank\s+N\.V\.)\b'
@@ -53,8 +50,6 @@ class DutchToEnglishAgent:
         for idx, comp in enumerate(companies_found, start=1):
             text = text.replace(comp.strip(), f"[Company_{idx}]")
 
-        # 5. Osobní jména (dvou- a tříslovná jména s velkými písmeny)
-        # Běžné tituly a pozice, které nesmí být považovány za křestní jméno
         job_titles_pattern = r'\b(?:Project\s+Manager|Projectmanager|General\s+Director|Directeur|Analist|Manager|Officer)\s+'
         text = re.sub(job_titles_pattern, '', text, flags=re.IGNORECASE)
 
@@ -242,7 +237,6 @@ def main():
     try:
         article = read_article()
 
-        # 1. Běh překladatelského agenta
         agent = DutchToEnglishAgent()
         result = agent.run(article)
         final_text = result["final_translation"]
@@ -252,10 +246,8 @@ def main():
         print("=" * 60 + "\n")
         print(final_text)
 
-        # Inicializace proměnné před podmínkou
         saved_file_name = None
 
-        # 2. Uložení přes FileSaverAgent
         print("\n" + "-" * 60)
         save_choice = input("Do you want to save this translation to a file? (Y/N): ").strip().upper()
 
@@ -267,13 +259,11 @@ def main():
         else:
             print("Action skipped. Translation was not saved.")
 
-        # 3. Vytvoření handbooku přes HandbookAgent
         print("\n" + "-" * 60)
         handbook_choice = input("Do you want HandbookAgent to create a Handbook from this? (Y/N): ").strip().upper()
 
         if handbook_choice == "Y":
             hb_agent = HandbookAgent(input_dir="translated_articles", output_dir="handbooks")
-            # Pokud se soubor neuložil v předchozím kroku, načte se nejnovější existující soubor
             hb_path = hb_agent.run(source_filename=saved_file_name)
             print(f"[HandbookAgent] Handbook successfully created: {hb_path}")
         else:

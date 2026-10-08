@@ -219,15 +219,12 @@ IMPORTANT:
         handbook_md = self.generate_handbook(article_content)
         handbook_md = re.sub(r"^(Here's|Here is).*?:\s*", "", handbook_md, flags=re.IGNORECASE).strip()
 
-        # Převod na HTML string
         html_content = self.markdown_to_html(handbook_md)
 
-        # Cílová složka
         self.output_dir.mkdir(parents=True, exist_ok=True)
         pdf_path = self.output_dir / f"{file_path.stem}_handbook.pdf"
 
         print("[HandbookAgent] Compiling directly to PDF...")
-        # Vytvoření dočasného HTML souboru, který se po převodu ihned smaže
         with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as temp_html:
             temp_html.write(html_content)
             temp_html_path = temp_html.name
