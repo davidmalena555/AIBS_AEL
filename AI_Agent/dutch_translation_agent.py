@@ -1,13 +1,13 @@
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from pathlib import Path
+
 from file_saver_agent import FileSaverAgent
 
-
 # Free local model running through Ollama.
-
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 OLLAMA_URL = os.getenv(
     "OLLAMA_URL",
@@ -18,16 +18,56 @@ OLLAMA_URL = os.getenv(
 class DutchToEnglishAgent:
     """
     Local AI agent that:
-    1. translates a Dutch article into English,
-    2. simplifies the English to CEFR B1/B2,
-    3. reviews the final result against the Dutch original.
-
-    It uses Ollama, so no paid API key is required.
+    1. Anonymizes PII locally in Python (GDPR compliance),
+    2. Translates the Dutch article into English,
+    3. Simplifies the English to CEFR B1/B2,
+    4. Reviews the final result against the Dutch original.
     """
 
     def __init__(self, model=MODEL):
         self.model = model
 
+    def anonymize_text(self, text: str) -> str:
+        # 1. E-maily
+        text = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[REDACTED_EMAIL]', text)
+
+        # 2. Peněžní částky, platy a rozpočty
+        currency_pattern = (
+            r'(?:€|\$|£|CZK|EUR|USD)\s*\d+(?:[\.,\s]\d+)*(?:\s*(?:miljoen|miljard|million|billion|k))?'
+            r'|\d+(?:[\.,\s]\d+)*\s*(?:€|\$|£|CZK|EUR|USD|euro|dollar|korun)'
+            r'(?:\s*(?:per\s+(?:maand|jaar|kwartaal|uur)|bruto|netto))?'
+        )
+        text = re.sub(currency_pattern, '[CONFIDENTIAL_AMOUNT]', text, flags=re.IGNORECASE)
+
+        # 3. Telefonní čísla
+        phone_pattern = r'(?:\+\d{1,3}[\s-]?)?\(?0?\d{1,4}\)?[\s.-]?\d{3}[\s.-]?\d{3,4}\b'
+        text = re.sub(phone_pattern, '[REDACTED_PHONE]', text)
+
+        # 4. Názvy firem (hledáme až 3 slova před právní formou/typem instituce)
+        company_pattern = (
+            r'\b(?:[A-Z][a-zA-Z0-9&]*\s+){1,3}'
+            r'(?:B\.V\.|N\.V\.|BV|NV|Ltd\.?|LLC|Inc\.?|Corp\.?|GmbH|Group|Holdings|Solutions|Logistics|Bank\s+N\.V\.)\b'
+        )
+        companies_found = sorted(set(re.findall(company_pattern, text)), key=len, reverse=True)
+        for idx, comp in enumerate(companies_found, start=1):
+            text = text.replace(comp.strip(), f"[Company_{idx}]")
+
+        # 5. Osobní jména (dvou- a tříslovná jména s velkými písmeny)
+        # Běžné tituly a pozice, které nesmí být považovány za křestní jméno
+        job_titles_pattern = r'\b(?:Project\s+Manager|Projectmanager|General\s+Director|Directeur|Analist|Manager|Officer)\s+'
+        text = re.sub(job_titles_pattern, '', text, flags=re.IGNORECASE)
+
+        name_pattern = r'\b[A-Z][a-z]+(?:\s+(?:van|der|den|de|het|ten|ter|von)\b)?\s+[A-Z][a-z]+\b'
+        names_found = set(re.findall(name_pattern, text))
+
+        person_idx = 1
+        for name in names_found:
+            if not any(tag in name for tag in ["[Company_", "[CONFIDENTIAL_", "[REDACTED_"]):
+                text = text.replace(name, f"[Person_{person_idx}]")
+                person_idx += 1
+
+        return text
+    
     def ask_ai(self, instructions, text):
         payload = {
             "model": self.model,
@@ -77,103 +117,73 @@ class DutchToEnglishAgent:
     def translate(self, dutch_article):
         instructions = """
 You are the Translator Agent.
-
-Translate the Dutch article into accurate and natural English.
-
-GDPR & Privacy Compliance:
-- Anonymize all personal identifiable information (PII):
-  - Replace real human full names with generic placeholders (e.g. "[Person A]", "[Author]", "[Subject]").
-  - Replace specific contact details (emails, phone numbers, home addresses) with "[REDACTED]".
-  - Keep public corporate or official organizational names intact if necessary for context.
-
-Rules:
-- Preserve all facts, dates, context, and numbers.
-- Preserve the original meaning.
-- Do not summarize.
-- Do not add information.
-- Do not intentionally simplify the English yet.
-- Return only the English translation.
+Translate the Dutch article into accurate, clear English.
+Keep all placeholders like [Person_1], [Company_1], [CONFIDENTIAL_AMOUNT], [REDACTED_EMAIL], [REDACTED_PHONE] exactly as they are.
+Preserve facts, context, dates, and numbers.
+Return ONLY the English translation.
 """
         return self.ask_ai(instructions, dutch_article)
 
     def simplify(self, english_translation):
         instructions = """
 You are the Language Simplifier Agent.
-
 Rewrite the English article so that it is suitable for a CEFR B1/B2 reader.
-
 Rules:
-- Keep all anonymized placeholders like [Person A] or [Subject] as they are. Do not try to guess or restore real names.
-- Keep exactly the same meaning and important information.
+- Keep all placeholders like [Person_1], [Company_1], [CONFIDENTIAL_AMOUNT] unchanged.
 - Prefer common and clear vocabulary.
 - Use reasonably short sentences.
-- Avoid difficult academic vocabulary when a simpler word works.
-- Avoid unnecessary idioms and very complex grammar.
-- Keep names, dates, numbers and facts unchanged.
-- Do not summarize.
-- Do not add new information.
-- Return only the rewritten English article.
+- Avoid unnecessary idioms and complex syntax.
+- Do not summarize or delete important facts.
+- Return ONLY the rewritten English article.
 """
         return self.ask_ai(instructions, english_translation)
 
-    def review(self, dutch_original, simplified_english):
+    def review(self, anonymized_dutch, simplified_english):
         instructions = """
 You are the Reviewer Agent.
-
-Compare the Dutch original article with the proposed B1/B2 English version.
-
+Compare the Dutch text with the proposed B1/B2 English version.
 Create the final corrected English article.
-
-Check internally that:
-- Strict Privacy/GDPR Rule: Real personal names MUST remain anonymized (e.g., [Person A]). Do NOT restore real human names from the original Dutch text.
-- the meaning of the Dutch original is preserved,
-- no important information is missing,
-- no information was invented,
-- names, dates and numbers are correct,
-- the English is natural and grammatically correct,
-- the language is approximately CEFR B1/B2,
-- difficult words are replaced with simpler alternatives when possible.
-
-IMPORTANT OUTPUT RULES:
-- Return ONLY the final corrected English article.
-- Do NOT explain your corrections.
-- Do NOT provide a checklist.
-- Do NOT write headings such as "Final corrected article".
-- Use normal English capitalization.
-- Do NOT write the article in ALL CAPS.
-- Capitalize only the beginning of sentences, proper names and normal acronyms.
+Rules:
+- Ensure all placeholders like [Person_1], [Company_1], [CONFIDENTIAL_AMOUNT] are strictly preserved.
+- Verify that the meaning is preserved and facts are correct.
+- Ensure the language is approximately CEFR B1/B2.
+- Return ONLY the final corrected English article without explanations.
 """
-
         review_input = f"""
 DUTCH ORIGINAL:
-{dutch_original}
+{anonymized_dutch}
 
 PROPOSED B1/B2 ENGLISH VERSION:
 {simplified_english}
 """
-        return self.ask_ai(instructions, review_input)
+        response = self.ask_ai(instructions, review_input)
 
-    def run(self, dutch_article):
-        if not dutch_article.strip():
+        cleaned_response = re.sub(r"^(Here's|Here is).*?:\s*", "", response, flags=re.IGNORECASE).strip()
+        
+        return cleaned_response
+
+    def run(self, raw_dutch_article):
+        if not raw_dutch_article.strip():
             raise ValueError("The article cannot be empty.")
 
-        print("\n[1/3] Translating Dutch article...")
-        draft = self.translate(dutch_article)
+        # Fáze 0: Deterministická GDPR anonymizace
+        print("\n[0/3] Applying GDPR pre-processing...")
+        safe_dutch = self.anonymize_text(raw_dutch_article)
+
+        print("[1/3] Translating Dutch article...")
+        draft = self.translate(safe_dutch)
 
         print("[2/3] Simplifying to B1/B2 English...")
         simplified = self.simplify(draft)
 
         print("[3/3] Reviewing the final translation...")
-        final = self.review(dutch_article, simplified)
+        final = self.review(safe_dutch, simplified)
 
         return {
             "draft_translation": draft,
             "simplified_translation": simplified,
             "final_translation": final,
         }
-
-
-from pathlib import Path
 
 
 def read_article():
@@ -188,39 +198,28 @@ def read_article():
         print("When you are finished, type END on a new line.\n")
 
         lines = []
-
         while True:
             line = input()
-
             if line.strip() == "END":
                 break
-
             lines.append(line)
 
         return "\n".join(lines).strip()
 
     elif choice == "2":
         articles_folder = Path("articles")
-
         if not articles_folder.exists():
-            raise ValueError(
-                "The 'articles' folder does not exist."
-            )
+            raise ValueError("The 'articles' folder does not exist.")
 
         files = list(articles_folder.glob("*.txt"))
-
         if not files:
-            raise ValueError(
-                "No .txt files were found in the articles folder."
-            )
+            raise ValueError("No .txt files were found in the articles folder.")
 
         print("\nAvailable articles:")
-
         for i, file in enumerate(files, start=1):
             print(f"{i} - {file.name}")
 
         file_choice = input("\nChoose an article: ").strip()
-
         try:
             selected_file = files[int(file_choice) - 1]
         except (ValueError, IndexError):
@@ -233,9 +232,7 @@ def read_article():
             raise ValueError("The selected file is empty.")
 
         print(f"\nLoaded: {selected_file.name}")
-
         return article.strip()
-
     else:
         raise ValueError("Please choose 1 or 2.")
 
@@ -244,7 +241,7 @@ def main():
     try:
         article = read_article()
 
-        # Běh prvního agenta
+        # Spuštění prvního agenta
         agent = DutchToEnglishAgent()
         result = agent.run(article)
         final_text = result["final_translation"]
@@ -254,17 +251,17 @@ def main():
         print("=" * 60 + "\n")
         print(final_text)
 
-        # Otázka na člověka (Human Confirmation Gate)
+        # Člověk ve smyčce (Human confirmation gate)
         print("\n" + "-" * 60)
-        confirm = input("Would you like FileSaverAgent to save this article? (Y/N): ").strip().upper()
+        save_choice = input("Do you want to save this translation to a file? (Y/N): ").strip().upper()
 
-        if confirm == "Y":
-            # Spuštění druhého agenta z importovaného souboru
-            saver = FileSaverAgent()
-            path = saver.save(final_text)
-            print(f"[FileSaverAgent] Article saved successfully to: {path}")
+        if save_choice == "Y":
+            # Spuštění druhého agenta
+            saver = FileSaverAgent(output_dir="translated_articles")
+            saved_path = saver.save(final_text)
+            print(f"[FileSaverAgent] Translation successfully saved to: {saved_path}")
         else:
-            print("Action cancelled. Article was not saved.")
+            print("Action skipped. Translation was not saved.")
 
     except Exception as error:
         print(f"\nError: {error}")

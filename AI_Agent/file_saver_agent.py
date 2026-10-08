@@ -12,8 +12,8 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 class FileSaverAgent:
     """
     Operational AI Agent:
-    1. Reads translated content and uses LLM to generate a descriptive file name.
-    2. Uses filesystem tools to safely save the file into translated_articles/.
+    1. Analyzes the translated article to generate an appropriate filename.
+    2. Saves the translated content into the target folder (translated_articles/).
     """
 
     def __init__(self, model=MODEL, output_dir="translated_articles"):
@@ -46,13 +46,12 @@ class FileSaverAgent:
 You are a File Organizer Agent.
 Generate a short, descriptive file name in English for this article.
 Rules:
-- Format: snake_case (e.g., tech_market_growth_2026.txt).
+- Format: snake_case (e.g., business_growth_report_2026.txt).
 - Maximum 4-5 words.
 - Always end with .txt.
-- Return ONLY the filename. No markdown, no explanations.
+- Return ONLY the filename. No markdown, no quotes, no extra text.
 """
         try:
-            # Pošleme jen prvních 400 znaků článku pro vytvoření názvu
             raw_name = self._ask_ai(instructions, text_content[:400])
             clean_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '', raw_name)
             if not clean_name.endswith(".txt"):
@@ -62,7 +61,7 @@ Rules:
             return "translated_article.txt"
 
     def save(self, content: str) -> Path:
-        print("\n[FileSaverAgent] Analyzing translation to generate file name...")
+        print("\n[FileSaverAgent] Analyzing article to generate filename...")
         filename = self.generate_filename(content)
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
