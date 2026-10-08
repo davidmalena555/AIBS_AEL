@@ -1,6 +1,8 @@
+import html
 import json
 import os
 import re
+import subprocess
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -15,10 +17,9 @@ OLLAMA_URL = os.getenv(
 class HandbookAgent:
     """
     Synthetic AI Agent that:
-    1. Loads a translated article from the translated_articles/ directory.
-    2. Converts the content into a structured Handbook (Markdown format)
-       following a standardized 4-section template.
-    3. Saves the resulting file into the handbooks/ directory.
+    1. Loads a translated article from translated_articles/.
+    2. Converts the content into a structured Handbook (Markdown).
+    3. Renders the Handbook to Markdown, print-ready HTML, and PDF.
     """
 
     def __init__(self, model=MODEL, input_dir="translated_articles", output_dir="handbooks"):
@@ -53,7 +54,7 @@ class HandbookAgent:
     def generate_handbook(self, article_text: str) -> str:
         instructions = """
 You are the Handbook Synthesis Agent.
-Your task is to convert the provided business/technical report into a standardized, professional 1-page Handbook.
+Convert the provided business report into a standardized, executive 1-page Handbook.
 
 Format the output strictly according to this 4-section structure:
 
@@ -71,7 +72,7 @@ Create a Markdown table with exact columns:
 - Tier 3: Advanced operations / validation hooks
 
 ## 3. Business Impact & Operational KPIs
-- Detail 2-3 business KPIs or impact metrics mentioned or derived from the text (e.g. cost reduction, order accuracy, cycle time).
+- Detail 2-3 business KPIs or impact metrics mentioned in the text.
 
 ## 4. Quick-Start Action Sheet: Operational Guide
 Target Audience: Operations Managers & Team Leads
@@ -83,22 +84,144 @@ Target Audience: Operations Managers & Team Leads
 IMPORTANT:
 - Output only the markdown handbook.
 - Do NOT include conversational filler like "Here is your handbook".
-- Maintain all anonymized tags (like [Company_1], [CONFIDENTIAL_AMOUNT]) intact.
+- Keep all anonymized tags (e.g. [Company_1], [CONFIDENTIAL_AMOUNT]) intact.
 """
         return self._ask_ai(instructions, article_text)
+
+    def markdown_to_html(self, markdown_text: str) -> str:
+        """Converts Markdown text into styled standalone HTML."""
+        body_elements = []
+        in_table = False
+        table_rows = []
+
+        lines = markdown_text.splitlines()
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            # Table handling
+            if line.startswith("|") and line.endswith("|"):
+                if re.match(r"^\|[\s\-:|]+\|$", line):
+                    continue
+                cells = [c.strip() for c in line.split("|")[1:-1]]
+                if not in_table:
+                    in_table = True
+                    headers = "".join(f"<th>{html.escape(c)}</th>" for c in cells)
+                    table_rows.append(f"<tr>{headers}</tr>")
+                else:
+                    cols = "".join(f"<td>{html.escape(c)}</td>" for c in cells)
+                    table_rows.append(f"<tr>{cols}</tr>")
+                continue
+            else:
+                if in_table:
+                    body_elements.append(f"<table>{''.join(table_rows)}</table>")
+                    table_rows = []
+                    in_table = False
+
+            # Headings and list elements
+            if line.startswith("# "):
+                body_elements.append(f"<h1>{html.escape(line[2:])}</h1>")
+            elif line.startswith("## "):
+                body_elements.append(f"<h2>{html.escape(line[3:])}</h2>")
+            elif line.startswith("### "):
+                body_elements.append(f"<h3>{html.escape(line[4:])}</h3>")
+            elif line.startswith("- ") or line.startswith("* "):
+                clean_bullet = re.sub(r"^[-*]\s+(\*\*)?", "", line).replace("**", "")
+                body_elements.append(f"<li>{html.escape(clean_bullet)}</li>")
+            else:
+                clean_text = line.replace("**", "")
+                body_elements.append(f"<p>{html.escape(clean_text)}</p>")
+
+        if in_table:
+            body_elements.append(f"<table>{''.join(table_rows)}</table>")
+
+        body_html = "\n".join(body_elements)
+
+        return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+    @page {{ size: A4; margin: 18mm; }}
+    body {{
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #1a202c;
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 30px;
+        line-height: 1.5;
+        font-size: 13px;
+    }}
+    h1 {{
+        color: #1e3a8a;
+        font-size: 20px;
+        border-bottom: 2px solid #3b82f6;
+        padding-bottom: 6px;
+        margin-bottom: 16px;
+    }}
+    h2 {{
+        color: #1d4ed8;
+        font-size: 15px;
+        margin-top: 18px;
+        margin-bottom: 8px;
+    }}
+    h3 {{
+        color: #4b5563;
+        font-size: 13px;
+        margin-top: 12px;
+        margin-bottom: 4px;
+    }}
+    p, li {{
+        margin-bottom: 4px;
+    }}
+    table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+        font-size: 12px;
+    }}
+    th {{
+        background-color: #eff6ff;
+        color: #1e40af;
+        border: 1px solid #bfdbfe;
+        padding: 6px 8px;
+        text-align: left;
+    }}
+    td {{
+        border: 1px solid #e2e8f0;
+        padding: 6px 8px;
+        vertical-align: top;
+    }}
+</style>
+</head>
+<body>
+{body_html}
+</body>
+</html>"""
+
+    def export_pdf_file(self, html_path: Path, pdf_path: Path):
+        """Attempts to render PDF using system wkhtmltopdf if installed."""
+        try:
+            subprocess.run(
+                ["wkhtmltopdf", "--quiet", str(html_path), str(pdf_path)],
+                check=True
+            )
+            print(f"[HandbookAgent] PDF successfully created: {pdf_path}")
+        except (subprocess.SubprocessError, FileNotFoundError):
+            # Pokud wkhtmltopdf není nainstalován, nespadne
+            print(f"[HandbookAgent] Note: Run 'sudo apt install -y wkhtmltopdf' for auto-PDF conversion.")
 
     def run(self, source_filename: str = None) -> Path:
         if not self.input_dir.exists():
             raise FileNotFoundError(f"Directory '{self.input_dir}' does not exist.")
 
-        # Select file
         if source_filename:
             file_path = self.input_dir / source_filename
         else:
             files = list(self.input_dir.glob("*.txt"))
             if not files:
                 raise FileNotFoundError(f"No .txt files found in '{self.input_dir}'.")
-            # Select the most recently modified file
             file_path = max(files, key=os.path.getmtime)
 
         print(f"\n[HandbookAgent] Loading article: {file_path.name}")
@@ -107,20 +230,27 @@ IMPORTANT:
 
         print("[HandbookAgent] Generating structured Handbook via LLM...")
         handbook_md = self.generate_handbook(article_content)
-
-        # Clean conversational intro if present
         handbook_md = re.sub(r"^(Here's|Here is).*?:\s*", "", handbook_md, flags=re.IGNORECASE).strip()
 
-        # Save to handbooks/ directory
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        handbook_filename = file_path.stem + "_handbook.md"
-        output_path = self.output_dir / handbook_filename
 
-        with open(output_path, "w", encoding="utf-8") as f:
+        # 1. Uložit Markdown
+        md_path = self.output_dir / f"{file_path.stem}_handbook.md"
+        with open(md_path, "w", encoding="utf-8") as f:
             f.write(handbook_md)
 
-        print(f"[HandbookAgent] Handbook successfully saved to: {output_path}")
-        return output_path
+        # 2. Uložit Styled HTML
+        html_path = self.output_dir / f"{file_path.stem}_handbook.html"
+        html_output = self.markdown_to_html(handbook_md)
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html_output)
+
+        # 3. Zkusit sestavit PDF
+        pdf_path = self.output_dir / f"{file_path.stem}_handbook.pdf"
+        self.export_pdf_file(html_path, pdf_path)
+
+        print(f"[HandbookAgent] Handbook successfully saved to: {md_path}")
+        return md_path
 
 
 if __name__ == "__main__":
