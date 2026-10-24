@@ -265,7 +265,7 @@ def main():
         pdf_path = None
         
         if handbook_choice == "Y":
-            hb_agent = HandbookAgent(input_dir="translated_articles", output_dir="handbooks")
+            hb_agent = HandbookAgent(input_dir="translated_articles", output_dir="../handbooks")
             pdf_path = hb_agent.run(source_filename=saved_file_name)
             print(f"[HandbookAgent] Handbook successfully created: {pdf_path}")
         else:

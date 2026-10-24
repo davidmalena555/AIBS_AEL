@@ -25,7 +25,7 @@ class HandbookAgent:
     3. Compiles directly into a styled, publication-ready PDF.
     """
 
-    def __init__(self, model=MODEL, input_dir="translated_articles", output_dir="handbooks"):
+    def __init__(self, model=MODEL, input_dir="translated_articles", output_dir="../handbooks"):
         self.model = model
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)

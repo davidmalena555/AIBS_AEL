@@ -10,15 +10,13 @@ class GitPublisherAgent:
     1. Locates the root Git repository (AIBS_AEL).
     2. Stages the generated Handbook PDF file (git add).
     3. Commits the changes with an informative message (git commit).
-    4. Automatically pulls remote changes (--rebase) to avoid conflicts.
-    5. Pushes the commit to the remote repository (git push).
+    4. Pushes the commit to the remote repository (git push).
     """
 
     def __init__(self, repo_dir: Optional[str] = None):
         if repo_dir:
             self.repo_dir = Path(repo_dir).resolve()
         else:
-            # Kořen repozitáře AIBS_AEL leží o jednu složku výše než AI_Agent
             self.repo_dir = Path(__file__).resolve().parent.parent
 
     def _run_git_command(self, args: list) -> subprocess.CompletedProcess:
@@ -34,7 +32,7 @@ class GitPublisherAgent:
         return result
 
     def publish_handbook(self, pdf_path: Path, custom_message: Optional[str] = None) -> bool:
-        """Adds, commits, pulls remote updates, and pushes the generated PDF to GitHub."""
+        """Adds, commits, pulls remote changes, and pushes the generated PDF to GitHub."""
         resolved_path = pdf_path.resolve()
 
         if not resolved_path.exists():
@@ -44,29 +42,25 @@ class GitPublisherAgent:
         print(f"[GitPublisherAgent] Git root detected at: {self.repo_dir}")
 
         try:
-            # Relativní cesta souboru vůči kořenu repozitáře (např. handbooks/soubor.pdf)
             rel_path = resolved_path.relative_to(self.repo_dir)
 
-            # 1. git add
             print(f"[GitPublisherAgent] Staging file: {rel_path}...")
             self._run_git_command(["add", str(rel_path)])
 
-            # 2. git commit
             if custom_message:
                 commit_msg = custom_message
             else:
-                commit_msg = f"docs(handbook): publish executive handbook {resolved_path.name}"
+                commit_msg = f"docs(handbook): publish {resolved_path.name}"
 
             print(f"[GitPublisherAgent] Committing changes...")
             self._run_git_command(["commit", "-m", commit_msg])
 
-            # 3. git pull --rebase (prevence odmítnutí pushe)
-            print(f"[GitPublisherAgent] Syncing with remote repository (git pull --rebase)...")
-            self._run_git_command(["pull", "--rebase"])
 
-            # 4. git push
+            print(f"[GitPublisherAgent] Fetching and merging remote updates...")
+            self._run_git_command(["pull", "origin", "main", "--no-rebase"])
+
             print(f"[GitPublisherAgent] Pushing to remote repository...")
-            self._run_git_command(["push"])
+            self._run_git_command(["push", "origin", "main"])
 
             print(f"[GitPublisherAgent] Successfully published to GitHub into 'handbooks/' folder!\n")
             return True
