@@ -7,6 +7,7 @@ from pathlib import Path
 
 from file_saver_agent import FileSaverAgent
 from handbook_agent import HandbookAgent
+from git_publisher_agent import GitPublisherAgent
 
 # Free local model running through Ollama.
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
@@ -261,13 +262,23 @@ def main():
 
         print("\n" + "-" * 60)
         handbook_choice = input("Do you want HandbookAgent to create a Handbook from this? (Y/N): ").strip().upper()
-
+        pdf_path = None
+        
         if handbook_choice == "Y":
             hb_agent = HandbookAgent(input_dir="translated_articles", output_dir="handbooks")
-            hb_path = hb_agent.run(source_filename=saved_file_name)
-            print(f"[HandbookAgent] Handbook successfully created: {hb_path}")
+            pdf_path = hb_agent.run(source_filename=saved_file_name)
+            print(f"[HandbookAgent] Handbook successfully created: {pdf_path}")
         else:
             print("Action skipped. Handbook was not created.")
+            
+        if pdf_path and Path(pdf_path).exists():
+            print("\n" + "-" * 60)
+            git_choice = input(f"Do you want GitPublisherAgent to push '{Path(pdf_path).name}' to GitHub? (Y/N): ").strip().upper()
+            if git_choice == "Y":
+                publisher = GitPublisherAgent()
+                publisher.publish_handbook(Path(pdf_path))
+            else:
+                print("Action skipped. Handbook was not published to GitHub.")
 
     except Exception as error:
         print(f"\nError: {error}")
