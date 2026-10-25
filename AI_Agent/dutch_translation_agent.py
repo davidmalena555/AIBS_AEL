@@ -6,8 +6,8 @@ import urllib.request
 from pathlib import Path
 
 from file_saver_agent import FileSaverAgent
-from handbook_agent import HandbookAgent
 from git_publisher_agent import GitPublisherAgent
+from handbook_agent import HandbookAgent
 
 # Free local model running through Ollama.
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
@@ -30,7 +30,6 @@ class DutchToEnglishAgent:
         self.model = model
 
     def anonymize_text(self, text: str) -> str:
-
         text = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[REDACTED_EMAIL]', text)
 
         currency_pattern = (
@@ -64,7 +63,7 @@ class DutchToEnglishAgent:
                 person_idx += 1
 
         return text
-    
+
     def ask_ai(self, instructions, text):
         payload = {
             "model": self.model,
@@ -154,16 +153,13 @@ PROPOSED B1/B2 ENGLISH VERSION:
 {simplified_english}
 """
         response = self.ask_ai(instructions, review_input)
-
         cleaned_response = re.sub(r"^(Here's|Here is).*?:\s*", "", response, flags=re.IGNORECASE).strip()
-        
         return cleaned_response
 
     def run(self, raw_dutch_article):
         if not raw_dutch_article.strip():
             raise ValueError("The article cannot be empty.")
 
-        # Fáze 0: Deterministická GDPR anonymizace
         print("\n[0/3] Applying GDPR pre-processing...")
         safe_dutch = self.anonymize_text(raw_dutch_article)
 
@@ -263,14 +259,15 @@ def main():
         print("\n" + "-" * 60)
         handbook_choice = input("Do you want HandbookAgent to create a Handbook from this? (Y/N): ").strip().upper()
         pdf_path = None
-        
+
         if handbook_choice == "Y":
             hb_agent = HandbookAgent(input_dir="translated_articles", output_dir="../handbooks")
-            pdf_path = hb_agent.run(source_filename=saved_file_name)
-            print(f"[HandbookAgent] Handbook successfully created: {pdf_path}")
+            # Pokud uživatel článek neuložil, nabídne se výběr ze složky (např. '1, 3')
+            # Pokud ho uložil, předá se přímo jako výchozí, nebo se nabídne výběr
+            pdf_path = hb_agent.run()
         else:
             print("Action skipped. Handbook was not created.")
-            
+
         if pdf_path and Path(pdf_path).exists():
             print("\n" + "-" * 60)
             git_choice = input(f"Do you want GitPublisherAgent to push '{Path(pdf_path).name}' to GitHub? (Y/N): ").strip().upper()
