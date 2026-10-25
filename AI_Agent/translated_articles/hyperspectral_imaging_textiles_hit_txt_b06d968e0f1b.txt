@@ -1,0 +1,18 @@
+=== SOURCE METADATA ===
+{
+  "publisher": "NHL Stenden Hogeschool",
+  "title": "Hyperspectral Imaging Textiles (HIT)",
+  "url": "https://www.nhlstenden.com/projecten/hyperspectral-imaging-textiles-hit",
+  "published": "niet vastgesteld op de geraadpleegde pagina",
+  "project_period": "februari 2024 tot en met januari 2028",
+  "accessed": "25 oktober 2026",
+  "language": "Nederlands",
+  "adaptation": "beknopte AI-samenvatting in eigen woorden; geen volledige artikeltekst."
+}
+=== END SOURCE METADATA ===
+
+The research project HIT develops automatic recognition of textile composition. Mixtures of fibers and existing additives make sorting and high-quality recycling difficult. Existing clothing labels do not always provide sufficient reliable information.
+
+The team combines hyperspectral SWIR-cameras with AI. Reference samples are investigated; images and information about the composition form data for recognition models. The project works on a dataset, algorithms, and a prototype for classification of textiles on a conveyor belt.
+
+The project page mentions preliminary possibilities for recognizing pure and mixed materials. Accuracy, noise reduction, and scaling are further being investigated. This pertains to textile recycling, not to a proven commercial system specifically for sports clothing. The source does not provide guaranteed savings or inventory improvement for a sports store.

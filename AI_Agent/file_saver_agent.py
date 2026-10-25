@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import uuid
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -60,14 +61,18 @@ Rules:
         except Exception:
             return "translated_article.txt"
 
-    def save(self, content: str) -> Path:
+    def save(self, content: str, source_record=None) -> Path:
         print("\n[FileSaverAgent] Analyzing article to generate filename...")
         filename = self.generate_filename(content)
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        target_path = self.output_dir / filename
-
-        with open(target_path, "w", encoding="utf-8") as f:
+        stem = re.sub(r"[^a-zA-Z0-9_-]", "_", Path(filename).stem).strip("_")[:70] or "translated_article"
+        # Unique filenames keep provenance and old translations from being overwritten.
+        target_path = self.output_dir / (stem + "_" + uuid.uuid4().hex[:12] + ".txt")
+        with target_path.open("x", encoding="utf-8") as f:
             f.write(content)
-
+        if source_record is not None:
+            sidecar = target_path.with_suffix(".source.json")
+            with sidecar.open("x", encoding="utf-8") as f:
+                json.dump(source_record, f, ensure_ascii=False, indent=2)
         return target_path

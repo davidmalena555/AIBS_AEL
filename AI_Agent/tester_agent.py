@@ -3,6 +3,7 @@
 
 Exit codes: 0 all pass, 1 content failure, 2 validation/configuration error.
 """
+from source_quality import load_verified_translation, PUBLIC_ENTITIES
 import argparse
 import json
 import os
@@ -48,24 +49,32 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise GateError("API redirects forbidden; configure the final endpoint")
 
+def mask_bracket_content(text):
+    """Hide balanced square-bracket spans for the privacy check only."""
+    spans = []
+    depth = 0
+    start = None
+    for index, char in enumerate(text):
+        if char == "[":
+            if depth == 0:
+                start = index
+            depth += 1
+        elif char == "]" and depth:
+            depth -= 1
+            if depth == 0:
+                spans.append((start, index + 1))
+    for start, end in reversed(spans):
+        text = text[:start] + "REDACTED" + text[end:]
+    return text
+
+
 def is_safe_placeholder_evidence(evidence_str, reason_str=""):
-    text_to_check = (str(evidence_str) + " " + str(reason_str)).upper()
-
-    if "REAL PERSON NAME [PERSON_" in text_to_check or "UNREDACTED REAL PERSON NAME" in text_to_check:
-        return True
-    if "REAL PERSONAL NAME FOUND" in text_to_check:
-        return True
-    if "CONFIDENT" in text_to_check and ("REDACTED MONEY" in text_to_check or "AMOUNT" in text_to_check):
-        return True
-
-    cleaned = re.sub(
-        r'\[(PERSON_\d+\vert{}COMPANY_\d+\vert{}CONFIDENTI[A-Z_]+\vert{}REDACTED_[A-Z_]+\vert{}CLIENT_\d+\vert{}DEALER_\d+)\]',
-        '',
-        str(evidence_str),
-        flags=re.IGNORECASE
-    )
-    cleaned = re.sub(r'[\s"\'“”\.,;:_\(\)\[\]\-]+', '', cleaned)
-    return not bool(re.search(r'[a-zA-Z]{3,}', cleaned))
+    # Reasons are model text, not proof that a finding is safe.
+    evidence = str(evidence_str).strip()
+    if not evidence:
+        return False
+    masked = mask_bracket_content(evidence)
+    return bool(re.fullmatch(r"(?:REDACTED[\s,;:.\-]*)+", masked))
 
 def validate_result(result, article):
     if isinstance(result, dict):
@@ -91,10 +100,12 @@ def validate_result(result, article):
 
         raw_findings = check.get("findings", [])
         if not isinstance(raw_findings, list):
-            raw_findings = []
+            raise GateError("Findings must be a list")
 
         validated_findings = []
         if verdict == "FAIL":
+            if not raw_findings:
+                raise GateError("FAIL verdict has no supporting findings")
             for f in raw_findings:
                 if isinstance(f, dict):
                     ev = str(f.get("evidence", "")).strip()
@@ -117,7 +128,10 @@ def validate_result(result, article):
                     })
 
             if not validated_findings:
-                verdict = "PASS"
+                if name == "anonymization" and all(isinstance(f, dict) and is_safe_placeholder_evidence(f.get("evidence", "")) for f in raw_findings):
+                    verdict = "PASS"
+                else:
+                    raise GateError("FAIL verdict has no valid evidence")
 
         cleaned_result[name] = {
             "verdict": verdict,
@@ -126,11 +140,11 @@ def validate_result(result, article):
 
     return cleaned_result
 
-def evaluate_text(article, *, model=MODEL, api_url=OLLAMA_URL, timeout=180):
+def _evaluate_text(article, *, model=MODEL, api_url=OLLAMA_URL, timeout=180, prompt=PROMPT):
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": PROMPT},
+            {"role": "system", "content": prompt},
             {"role": "user", "content": json.dumps({"article": article})},
         ],
         "stream": False,
@@ -165,6 +179,20 @@ def evaluate_text(article, *, model=MODEL, api_url=OLLAMA_URL, timeout=180):
         raise GateError(f"Malformed Ollama response: {exc}") from exc
 
 
+def evaluate_text(article, *, model=MODEL, api_url=OLLAMA_URL, timeout=180):
+    # Separate requests keep bracket contents out of the privacy model input.
+    masked = mask_bracket_content(article)
+    for entity in sorted(PUBLIC_ENTITIES, key=len, reverse=True):
+        masked = masked.replace(entity, "PUBLIC_ORGANISATION")
+    privacy_prompt = PROMPT + "\nFor anonymization, REDACTED is an accepted placeholder. PUBLIC_ORGANISATION is an approved public-source institution/brand, not a private identity. A company suffix such as B.V., BV, Ltd or Inc alone is not an identity. Do not fail it without an actual name."
+    privacy = _evaluate_text(masked, model=model, api_url=api_url,
+                             timeout=timeout, prompt=privacy_prompt)
+    reading = _evaluate_text(article, model=model, api_url=api_url,
+                             timeout=timeout)
+    return {"anonymization": privacy["anonymization"],
+            "readability": reading["readability"]}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path,
@@ -181,7 +209,12 @@ def main(argv=None):
             raise GateError(f"Missing input directory: {args.input_dir}")
 
         if args.files:
-            files = [args.input_dir / f for f in args.files if (args.input_dir / f).is_file()]
+            files = []
+            for f in args.files:
+                candidate = (args.input_dir / f).resolve()
+                if candidate.parent != args.input_dir.resolve() or not candidate.is_file():
+                    raise GateError("Invalid or missing selected file: " + f)
+                files.append(candidate)
         else:
             files = sorted(p for p in args.input_dir.rglob("*") if p.is_file() and p.suffix.lower() in {".txt", ".md"})
 
@@ -192,7 +225,8 @@ def main(argv=None):
         for path in files:
             print("\nArticle: " + json.dumps(str(path.name)), flush=True)
             try:
-                article = path.read_text(encoding="utf-8-sig")
+                _, article, _ = load_verified_translation(path)
+                print("  provenance/fidelity: PASS", flush=True)
                 if not article.strip() or len(article) > args.max_chars:
                     raise GateError("Empty article or character limit exceeded")
                 results = evaluate_text(article, model=args.model,
@@ -203,7 +237,7 @@ def main(argv=None):
                         print("    Evidence: " + json.dumps(finding["evidence"]))
                         print("    Reason: " + json.dumps(finding["reason"]))
                     rejected |= check["verdict"] == "FAIL"
-            except (GateError, OSError, UnicodeError) as exc:
+            except (GateError, OSError, UnicodeError, ValueError) as exc:
                 errored = True
                 print(f"  anonymization: FAIL\n  readability: FAIL\n  Validation error: {exc}")
         if rejected or errored:

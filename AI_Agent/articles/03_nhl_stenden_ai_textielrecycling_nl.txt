@@ -1,0 +1,16 @@
+AI voor herkenning en recycling van textiel
+
+Bron: NHL Stenden Hogeschool
+Oorspronkelijke titel: Hyperspectral Imaging Textiles (HIT)
+URL: https://www.nhlstenden.com/projecten/hyperspectral-imaging-textiles-hit
+Publicatiedatum: niet vastgesteld op de geraadpleegde pagina
+Projectperiode: februari 2024 tot en met januari 2028
+Geraadpleegd: 25 oktober 2026
+Taal van de bron: Nederlands
+Bewerking: beknopte AI-samenvatting in eigen woorden; geen volledige artikeltekst.
+
+Het onderzoeksproject HIT ontwikkelt automatische herkenning van textielsamenstellingen. Mengsels van vezels en aanwezige hulpstoffen maken sorteren en hoogwaardige recycling moeilijk. Bestaande kledinglabels geven niet altijd voldoende betrouwbare informatie.
+
+Het team combineert hyperspectrale SWIR-camera's met AI. Referentiemonsters worden onderzocht; beelden en informatie over de samenstelling vormen gegevens voor herkenningsmodellen. Het project werkt aan een dataset, algoritmes en een prototype voor classificatie van textiel op een lopende band.
+
+De projectpagina meldt voorlopige mogelijkheden om zuivere en gemengde materialen te herkennen. Nauwkeurigheid, stoorstoffen en opschaling worden verder onderzocht. Het gaat om textielrecycling, niet om een bewezen commercieel systeem specifiek voor sportkleding. De bron geeft geen gegarandeerde besparing of voorraadverbetering voor een sportwinkel.

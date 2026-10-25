@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "publisher": "NHL Stenden Hogeschool",
+    "title": "Hyperspectral Imaging Textiles (HIT)",
+    "url": "https://www.nhlstenden.com/projecten/hyperspectral-imaging-textiles-hit",
+    "published": "niet vastgesteld op de geraadpleegde pagina",
+    "project_period": "februari 2024 tot en met januari 2028",
+    "accessed": "25 oktober 2026",
+    "language": "Nederlands",
+    "adaptation": "beknopte AI-samenvatting in eigen woorden; geen volledige artikeltekst."
+  },
+  "safe_original": "Het onderzoeksproject HIT ontwikkelt automatische herkenning van textielsamenstellingen. Mengsels van vezels en aanwezige hulpstoffen maken sorteren en hoogwaardige recycling moeilijk. Bestaande kledinglabels geven niet altijd voldoende betrouwbare informatie.\n\nHet team combineert hyperspectrale SWIR-camera's met AI. Referentiemonsters worden onderzocht; beelden en informatie over de samenstelling vormen gegevens voor herkenningsmodellen. Het project werkt aan een dataset, algoritmes en een prototype voor classificatie van textiel op een lopende band.\n\nDe projectpagina meldt voorlopige mogelijkheden om zuivere en gemengde materialen te herkennen. Nauwkeurigheid, stoorstoffen en opschaling worden verder onderzocht. Het gaat om textielrecycling, niet om een bewezen commercieel systeem specifiek voor sportkleding. De bron geeft geen gegarandeerde besparing of voorraadverbetering voor een sportwinkel.",
+  "safe_original_sha256": "434627c21e94c595336b03619a7da160f7893bdaa4c0445a1354ab22dd673668",
+  "translation_sha256": "feb5daf8db4d1a9092f62589c9edb0bf113e3f965849106870b102c0a18ce10c",
+  "quality": {
+    "status": "PASS",
+    "numeric_and_placeholder_check": "PASS",
+    "semantic_audit": {
+      "verdict": "PASS",
+      "issues": []
+    },
+    "model": "qwen2.5:3b"
+  }
+}

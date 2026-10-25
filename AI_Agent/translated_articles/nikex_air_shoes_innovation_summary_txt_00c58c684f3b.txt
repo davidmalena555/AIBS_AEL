@@ -1,0 +1,17 @@
+=== SOURCE METADATA ===
+{
+  "publisher": "NIKE, Inc.",
+  "title": "Het onwerkelijke laten ontstaan: hoe Nike de meest verrassende Air schoenen ooit maakte",
+  "url": "https://about.nike.com/nl/magazine/creating-the-unreal-how-nike-made-its-wildest-air-footwear-yet",
+  "published": "11 april 2024",
+  "accessed": "25 oktober 2026",
+  "language": "Nederlands",
+  "adaptation": "beknopte AI-samenvatting in eigen woorden; geen volledige artikeltekst."
+}
+=== END SOURCE METADATA ===
+
+Nike describes A.I.R. as a design project involving thirteen athletes. The participating sports are athletics, football, basketball, and tennis. Participating design teams used information about the athletes' needs to develop visual ideas for sports shoes using generative AI.
+
+The images served as inspiration, not as direct, usable end products. Designers selected concepts, processed feedback, and investigated practical applications. In further development, they used more digital simulations and three-dimensional prints. Human design knowledge was necessary to recognize impractical presentations.
+
+This is a company description of prototypes. The source does not prove any general return on investment for small sport clothing companies and contains no measured improvement in their inventory management. The application pertains to product development, not market forecasting.

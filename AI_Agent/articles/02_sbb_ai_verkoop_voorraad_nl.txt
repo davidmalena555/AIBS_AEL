@@ -1,0 +1,15 @@
+AI voor verkoopvoorspelling en voorraadbeheer
+
+Bron: SBB
+Oorspronkelijke pagina: Marktsegment Retail - Retail management
+URL: https://trendrapportage.s-bb.nl/trendverkenningen/kunstmatige-intelligentie/marktsegment-retail/?item=retail+management&tab=per+dossier
+Publicatiedatum: niet vastgesteld op de geraadpleegde pagina
+Geraadpleegd: 25 oktober 2026
+Taal van de bron: Nederlands
+Bewerking: beknopte AI-samenvatting van relevante onderdelen; geen volledige artikeltekst.
+
+SBB beschrijft hoe kunstmatige intelligentie winkelmanagement kan ondersteunen. Historische verkoopgegevens kunnen worden gebruikt om toekomstige verkoop te schatten. Deze informatie kan helpen bij beslissingen over voorraadniveaus en productieplanning.
+
+De verkenning noemt ook productaanbevelingen, klantvragen, productgegevens en personeelsplanning als toepassingsgebieden. Welke gegevens nodig zijn, hangt af van het gekozen probleem. Bij voorspellende toepassingen kunnen naast aankopen ook beschikbaarheid bij leveranciers en logistieke gegevens relevant zijn.
+
+De bron bespreekt retail in het algemeen. Het is geen effectmeting bij een sportkledingbedrijf en levert geen vast besparingspercentage, implementatiebudget of gegarandeerde terugverdientijd. Voor een toepassing bij sportartikelen blijft een afzonderlijke beoordeling van de eigen gegevens en bedrijfsprocessen nodig. Dat is een toepassingsbeperking, geen gerapporteerd onderzoeksresultaat.

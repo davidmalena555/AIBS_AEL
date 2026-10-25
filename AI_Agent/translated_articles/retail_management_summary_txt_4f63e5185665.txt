@@ -1,0 +1,17 @@
+=== SOURCE METADATA ===
+{
+  "publisher": "SBB",
+  "title": "Marktsegment Retail - Retail management",
+  "url": "https://trendrapportage.s-bb.nl/trendverkenningen/kunstmatige-intelligentie/marktsegment-retail/?item=retail+management&tab=per+dossier",
+  "published": "niet vastgesteld op de geraadpleegde pagina",
+  "accessed": "25 oktober 2026",
+  "language": "Nederlands",
+  "adaptation": "beknopte AI-samenvatting van relevante onderdelen; geen volledige artikeltekst."
+}
+=== END SOURCE METADATA ===
+
+SBB explains how AI can help with retail management. By using past sales data, we can guess what sales might be in the future. This helps with decisions about how much stock to keep and how much to produce.
+
+The article also mentions product recommendations, customer inquiries, product data, and personnel scheduling as areas where AI is used. The data needed, however, depends on the problem being solved. For supply chain applications, besides purchases, data from suppliers and logistics might also be important.
+
+The article discusses retail in general. It does not measure the effectiveness of AI for a sports clothing company, nor does it provide a fixed percentage of savings, a budget, or a guaranteed payback period. For a sports apparel application, a separate evaluation of your own data and business processes is still required. This is a limitation of the application, not a reported research result.

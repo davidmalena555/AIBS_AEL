@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import List, Optional
 
 import markdown
+from source_quality import load_verified_translation
+from handbook_quality import build_handbook
 
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
@@ -32,7 +34,8 @@ class HandbookAgent:
                 {"role": "user", "content": context}
             ],
             "stream": False,
-            "options": {"temperature": 0.2, "num_ctx": 16384}
+            "format": "json",
+            "options": {"temperature": 0.0, "num_ctx": 16384}
         }
         req = urllib.request.Request(
             OLLAMA_URL,
@@ -41,95 +44,18 @@ class HandbookAgent:
             method="POST"
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=180) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
+                if data.get("done") is not True or data.get("done_reason") not in (None, "stop"):
+                    raise RuntimeError("Handbook model response incomplete/truncated")
                 return data["message"]["content"].strip()
         except urllib.error.URLError:
             raise RuntimeError("Cannot reach Ollama. Ensure 'ollama serve' is active.")
 
-    def generate_handbook(self, combined_articles_text: str) -> str:
-        instructions = """
-You are an Applied AI Researcher at HAN University of Applied Sciences.
-Synthesize the PROVIDED SOURCE TEXT into an official HAN AIBS x AEL Research Handbook.
-
-CRITICAL REQUIREMENTS:
-- Synthesize original, case-specific paragraphs derived strictly from the SOURCE TEXT below.
-- Integrate the specific facts, metrics, company details, KPIs, or inventory observations directly into the chapters.
-- Preserve all anonymized tokens intact ([Company_1], [CONFIDENTIAL_AMOUNT], [Person_1], [Person_2], etc.).
-- Output ONLY valid Markdown.
-
-HANDBOOK STRUCTURE:
-
-# AI for SMEs — Handbook
-A living handbook that helps regional manufacturing & wholesale SMEs put AI to work — written by HAN students, one practical question at a time.
-
-This is the handbook's template. The structure is the shell every cohort fills. Content comes from the teams: researched in the AIBS module, and produced through the research platform the same teams build in AEL.
-
----
-
-# Start here
-Write a 3-4 sentence orientation tailored specifically to the problems discussed in the source text (e.g., inventory forecasting, supply chain bottlenecks, or financial ROI). Explain in plain language what this edition covers.
-
----
-
-# The questions this handbook answers
-Create a Markdown table with the relevant themes covered by the source document:
-| # | Theme | The SME-facing question |
-| 1 | Operational Gaps & Data Realities | [Formulate a specific question based on the text's challenges] |
-| 2 | Practical Implementation & ROI | [Formulate a specific question based on the text's use cases] |
-
----
-
-# Chapter template: Theme 1 — Operational Gaps & Data Realities
-*One sentence summarizing what this chapter helps an owner do.*
-Team: AIBS Cohort | SME Context: Regional SME Wholesale & Operations | Sources last appraised: October 2026
-
-## 1. The question, for this kind of SME
-Narrow down the question using the specific SME bottlenecks found in the source text.
-
-## 2. The translation
-Explain the real-world operational problem versus what the owner thinks they need, citing the specific evidence from the source text.
-
-## 3. Illustrative use case (CRISP-DM)
-Write a detailed, case-specific breakdown for ALL 6 CRISP-DM stages directly applying the facts from the source text:
-- **Business understanding:** The concrete business target (referencing exact retention rates, stockout issues, or cost metrics from the text).
-- **Data understanding:** The specific data mentioned or needed (transaction records, order logs, ERP tracking).
-- **Data preparation:** Required data cleaning and anonymization before processing.
-- **Modelling:** Practical model choice (e.g., time-series forecasting, regression, or automated categorization).
-- **Evaluation:** Measuring success against the targets (e.g., reducing implementation days or fulfillment errors).
-- **Deployment:** How staff or warehouse managers receive the automated recommendation.
-
-## 4. Recommended tooling
-Recommend 2-3 realistic tools (e.g., Power Query, Python script, or ERP connector) with estimated hours and cost.
-
-## 5. Responsible AI & trust
-Discuss data security, local anonymization, and GDPR compliance related to this specific case.
-
-## 6. First five steps for an owner
-Provide 5 sequential, realistic Monday-morning actions numbered 1 to 5 directly addressing the findings in the text.
-
-## 7. Sources
-State the sources evaluated (distinguish between the provided case interview/report and secondary industry benchmarks).
-
----
-
-# Tooling index
-Create a clean Markdown table summarizing tools, use case, estimated effort (hours), and cost.
-
----
-
-# Regional ecosystem & support
-List 2-3 regional Dutch support organizations (e.g., Oost NL, VNO-NCW, HAN Applied Research) and how they can help with this specific adoption challenge.
-
----
-
-# About this handbook
-- **Who writes it:** Students of HAN University of Applied Sciences, in teams, as the integrated task of AIBS and AEL.
-- **The quality bar:** Clarity, accuracy against appraised sources, responsible-AI coverage, and usefulness.
-- **Educational, not consultancy:** Educational inspiration, not formal business liability.
-- **Confidentiality:** Real SME cases are anonymised or published only with consent.
-"""
-        return self._ask_ai(instructions, combined_articles_text)
+    def generate_handbook(self, sources) -> str:
+        document, report = build_handbook(sources, self._ask_ai)
+        self.last_quality_report = report
+        return document
 
     def markdown_to_html(self, md_content: str) -> str:
         body = markdown.markdown(md_content, extensions=["tables", "fenced_code"])
@@ -159,6 +85,10 @@ List 2-3 regional Dutch support organizations (e.g., Oost NL, VNO-NCW, HAN Appli
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+        h1, h2, h3, h4 { page-break-after: avoid; }
+        h4 { font-size: 10pt; font-weight: normal; margin-bottom: 4px; }
+        tr, blockquote { page-break-inside: avoid; }
+        p { orphans: 3; widows: 3; }
         h1 {
             color: #005F4B;
             font-size: 18pt;
@@ -231,7 +161,7 @@ List 2-3 regional Dutch support organizations (e.g., Oost NL, VNO-NCW, HAN Appli
 </html>"""
 
     def _get_unique_pdf_path(self, base_name: str) -> Path:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         sanitized = re.sub(r'[^a-zA-Z0-9_-]', '_', base_name).strip('_')
         return self.output_dir / f"{sanitized}_handbook_{timestamp}.pdf"
 
@@ -242,7 +172,7 @@ List 2-3 regional Dutch support organizations (e.g., Oost NL, VNO-NCW, HAN Appli
         print("=" * 60)
 
         tester_script = Path(__file__).parent / "tester_agent.py"
-        cmd = [sys.executable, str(tester_script), "--files"] + filenames
+        cmd = [sys.executable, str(tester_script), "--input-dir", str(self.input_dir.resolve()), "--model", self.model, "--api-url", OLLAMA_URL, "--files"] + filenames
         result = subprocess.run(cmd)
 
         return result.returncode == 0
@@ -298,18 +228,20 @@ List 2-3 regional Dutch support organizations (e.g., Oost NL, VNO-NCW, HAN Appli
             return None
 
         print(f"\n[HandbookAgent] Aggregating {len(target_paths)} verified source report(s):")
-        combined_text_blocks = []
-        for path in target_paths:
-            print(f" -> Including: {path.name}")
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-                combined_text_blocks.append(f"--- SOURCE DOCUMENT: {path.stem} ---\n{content}\n")
-
-        aggregated_text = "\n\n".join(combined_text_blocks)
-
-        print("[HandbookAgent] Synthesizing continuous handbook via Ollama...")
-        handbook_md = self.generate_handbook(aggregated_text)
-        handbook_md = re.sub(r"^(Here's|Here is).*?:\s*", "", handbook_md, flags=re.IGNORECASE).strip()
+        sources = []
+        for i, path in enumerate(target_paths, 1):
+            metadata, body, provenance = load_verified_translation(path)
+            sources.append({"id": f"S{i}", "filename": path.name, "metadata": metadata, "body": body})
+        print("[HandbookAgent] Extracting evidence and checking support...")
+        try:
+            handbook_md = self.generate_handbook(sources)
+        except (ValueError, RuntimeError, KeyError, TypeError) as exc:
+            reports = self.output_dir / "quality_reports"
+            reports.mkdir(parents=True, exist_ok=True)
+            report_path = reports / ("failed_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f") + ".json")
+            report_path.write_text(json.dumps({"status":"FAIL","error":str(exc),"selected_files":selected_file_names},indent=2),encoding="utf-8")
+            print(f"[HandbookAgent] CANCELLED before PDF: {exc}. Report: {report_path}")
+            return None
 
         html_content = self.markdown_to_html(handbook_md)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -320,6 +252,9 @@ List 2-3 regional Dutch support organizations (e.g., Oost NL, VNO-NCW, HAN Appli
             base_filename = target_paths[0].stem
 
         pdf_path = self._get_unique_pdf_path(base_filename)
+        pdf_path.with_suffix(".md").write_text(handbook_md, encoding="utf-8")
+        pdf_path.with_suffix(".quality.json").write_text(json.dumps(self.last_quality_report, ensure_ascii=False, indent=2), encoding="utf-8")
+
 
         print(f"[HandbookAgent] Compiling official PDF: {pdf_path.name}...")
         with tempfile.NamedTemporaryFile("w", suffix=".html", encoding="utf-8", delete=False) as temp_html:
@@ -331,7 +266,7 @@ List 2-3 regional Dutch support organizations (e.g., Oost NL, VNO-NCW, HAN Appli
             subprocess.run(
                 [
                     "wkhtmltopdf",
-                    "--enable-local-file-access",
+                    "--disable-local-file-access",
                     "--margin-top", "12mm",
                     "--margin-bottom", "12mm",
                     "--margin-left", "14mm",

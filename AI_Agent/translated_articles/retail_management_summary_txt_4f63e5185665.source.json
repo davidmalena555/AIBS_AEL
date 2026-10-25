@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "publisher": "SBB",
+    "title": "Marktsegment Retail - Retail management",
+    "url": "https://trendrapportage.s-bb.nl/trendverkenningen/kunstmatige-intelligentie/marktsegment-retail/?item=retail+management&tab=per+dossier",
+    "published": "niet vastgesteld op de geraadpleegde pagina",
+    "accessed": "25 oktober 2026",
+    "language": "Nederlands",
+    "adaptation": "beknopte AI-samenvatting van relevante onderdelen; geen volledige artikeltekst."
+  },
+  "safe_original": "SBB beschrijft hoe kunstmatige intelligentie winkelmanagement kan ondersteunen. Historische verkoopgegevens kunnen worden gebruikt om toekomstige verkoop te schatten. Deze informatie kan helpen bij beslissingen over voorraadniveaus en productieplanning.\n\nDe verkenning noemt ook productaanbevelingen, klantvragen, productgegevens en personeelsplanning als toepassingsgebieden. Welke gegevens nodig zijn, hangt af van het gekozen probleem. Bij voorspellende toepassingen kunnen naast aankopen ook beschikbaarheid bij leveranciers en logistieke gegevens relevant zijn.\n\nDe bron bespreekt retail in het algemeen. Het is geen effectmeting bij een sportkledingbedrijf en levert geen vast besparingspercentage, implementatiebudget of gegarandeerde terugverdientijd. Voor een toepassing bij sportartikelen blijft een afzonderlijke beoordeling van de eigen gegevens en bedrijfsprocessen nodig. Dat is een toepassingsbeperking, geen gerapporteerd onderzoeksresultaat.",
+  "safe_original_sha256": "799b70f5e5e71d00f00325d7122311072cf6e3879875afa9ede9296946cec702",
+  "translation_sha256": "5b671149a943f04f777cb885be1bfffbd56cc5aa265d28c9a23419a302ce30cf",
+  "quality": {
+    "status": "PASS",
+    "numeric_and_placeholder_check": "PASS",
+    "semantic_audit": {
+      "verdict": "PASS",
+      "issues": []
+    },
+    "model": "qwen2.5:3b"
+  }
+}
