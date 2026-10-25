@@ -21,11 +21,11 @@ class HandbookAgent:
     """
     Synthetic AI Agent that:
     1. Loads translated articles from translated_articles/.
-    2. Synthesizes a unified 2-chapter academic Handbook (Chapter 5 & 6) aligned with AIBS HAN methodology.
-    3. Compiles directly into a styled, publication-ready PDF.
+    2. Synthesizes an official HAN AIBS x AEL Course Handbook with compact continuous layout.
+    3. Compiles directly into a styled, publication-ready PDF via wkhtmltopdf.
     """
 
-    def __init__(self, model=MODEL, input_dir="translated_articles", output_dir="../handbooks"):
+    def __init__(self, model: str = MODEL, input_dir: str = "translated_articles", output_dir: str = "../handbooks"):
         self.model = model
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
@@ -57,86 +57,127 @@ class HandbookAgent:
     def generate_handbook(self, combined_articles_text: str) -> str:
         instructions = """
 You are an expert Applied AI Researcher at HAN University of Applied Sciences.
-Your task is to synthesize the provided company/sector reports into an official 2-Chapter Research Handbook for SME owners.
-The document must strictly follow the academic handbook structure shown below, with factual, sober, and practical phrasing.
+Synthesize the provided SME research into the official HAN AIBS x AEL Course Handbook format.
 
-Format the markdown output strictly according to these two linked chapters:
+CRITICAL INSTRUCTIONS:
+- Strictly follow the official course template structure. Do NOT invent new arbitrary headings.
+- Use concise, sober, practical language suitable for busy SME business owners. Keep explanations compact and punchy.
+- Preserve all anonymized tokens intact ([Company_X], [CONFIDENTIAL_AMOUNT], [Person_X]).
+- Output strictly clean Markdown only (no conversational filler).
 
-# Chapter 5: SME Knowledge Gaps: What Regional SMEs Still Do Not Know About AI
+REQUIRED SECTIONS TO GENERATE:
 
-## 1. The narrow question
-- State in 2-3 sentences the core decision the owner faces: what they do not know yet, and what they need to know before committing budget to an AI tool.
+# AI for SMEs — Handbook
+A living handbook that helps regional manufacturing & wholesale SMEs put AI to work — written by HAN students, one practical question at a time.
 
-## 2. The translation
-- Frame the problem using the distinction between "known unknowns" (risks the firm already recognizes) and "unknown unknowns" (unidentified data/process blockers, such as dirty ERP records).
-- State clearly: close the knowledge gaps here first, so the use cases in Chapter 6 become realistic investments rather than guesses.
-
-## 3. Illustrative use case (CRISP-DM)
-Walk through one specific, realistic business pain point across the 6 CRISP-DM stages:
-- **Business understanding:** The specific operational goal (e.g. stockout reduction, automated invoicing).
-- **Data understanding:** How known unknowns turn into unknown unknowns (missing fields, inconsistent historical data).
-- **Data preparation:** The labor and timeline needed for data hygiene (e.g. 18-24 months of clean history).
-- **Modelling:** Why generic off-the-shelf models fail if deployed on uncleaned data.
-- **Evaluation:** Setting a strict confidence threshold (<85%) triggering manual human review.
-- **Deployment:** The risk of deploying on guesswork before closing data gaps.
-
-## 4. Recommended tooling
-- Practical low-cost tools: staff AI usage survey, free readiness assessment checklists, and manual ERP data quality spot-checks.
-
-## 5. Responsible AI and Trust
-- Define the Data Boundary Rule: specify that no raw ERP exports, client identifiers, or proprietary pricing may be pasted into external public LLMs.
-
-## 6. First five steps for an owner
-1. Informally list which AI tools staff already use.
-2. Select one specific operational bottleneck and define what must be true to trust an AI tool with it.
-3. Conduct a spot check on historical records in the ERP for missing or invalid attributes.
-4. Consult an independent trusted advisor on real ROI achieved by comparable firms.
-5. Formulate a documented gap list as the direct input for choosing a use case in Chapter 6.
-
-## 7. Sources
-- Appraise sources: specify which findings originate from field data/interviews, and which from secondary reports (CBS, Eurostat, OECD, or trade press).
+This is the handbook's template. The structure is the shell every cohort fills. Content comes from the teams: researched in the AIBS module, and produced through the research platform the same teams build in AEL.
 
 ---
 
-# Chapter 6: Practical AI Use Cases for Regional SMEs
+# Start here
+Orientation for an SME owner who is new to AI: what this handbook is, who it is for, how to use it, and what it deliberately does not do. Written for a busy non-technical reader — plain language, no jargon, and short enough to read in one sitting.
 
-## 1. Executive Summary & Context
-- Summary of the SME context (100-200 employees, 1-2 internal IT staff, seasonal demand, operational bottlenecks).
+---
 
-## 2. Framework: The 3 AI Maturity Tiers for SMEs
-- **Tier 1: Off-the-Shelf Generative & Visual Tools (Rapid Deployment)**
-  - Description: Plug-and-play SaaS, automated email routing, lightweight marketing or visual assets.
-  - Primary Goal: Eliminate administrative friction and lower time-to-market.
-- **Tier 2: Workflow & Process Automation (Task-Level Optimization)**
-  - Description: Embedded tools integrated with ERP/PIM systems for data cleaning, translation, and localized workflows.
-  - Primary Goal: Save labor hours, eliminate manual spreadsheet entries, and reduce material waste.
-- **Tier 3: Predictive Operations & Demand Balancing (Integrated Intelligence)**
-  - Description: Fine-tuned predictive ML models for demand forecasting, automated reorders, and stock balancing.
-  - Primary Goal: Prevent stockouts and balance seasonal spikes with human-in-the-loop oversight.
+# The questions this handbook answers
+The handbook is organised by themes, and every theme is posed as a question an owner would actually ask — not as a topic. The themes are the stable structure; the chapters beneath them compound from cohort to cohort.
 
-## 3. Comparative Benchmarks & Operational Performance
-Create a clean Markdown table with exact columns:
-| Maturity Tier | Implementation Focus | Operational Impact | Key SME ROI Anchor / KPI |
+| # | Theme | The SME-facing question |
+|---|---|---|
+| 1 | SME Knowledge Gaps | What do we not know yet about AI, and what would we need to know to decide well? |
+| 2 | AI Use Cases at SMEs | What do firms like mine use AI for, and what actually pays off? |
 
-## 4. Regional Perspectives: Three AI Economies
-- **United States:** Capital-intensive, platform-driven models focused on rapid market dominance and proprietary platforms.
-- **China:** State-directed, vertically integrated industrial networks focusing on speed, manufacturing throughput, and shop-floor automation.
-- **Europe:** SME Sovereignty & Sustainability Route prioritizing human-in-the-loop governance, worker autonomy, and strict compliance (GDPR, EU AI Act).
+---
 
-## 5. Quick-Start Action Sheet: SME AI Implementation Roadmap
-- **Phase 1: Assessment & Data Audit (Weeks 1-2):** Audit ERP records, enforce local anonymization, and define anchor KPIs.
-- **Phase 2: Tier 1 & Tier 2 Pilot Deployment (Weeks 3-4):** Deploy plug-and-play tools, automate high-friction workflows, and enforce citation verification.
-- **Phase 3: Workflow Integration & Human Safeguards (Weeks 5-6):** Establish failure hooks, train internal IT staff, and ensure compliance with regional regulations.
+# Chapter template: Theme 1 — What do we not know yet about AI, and what would we need to know to decide well?
+*One sentence on what this chapter helps an owner do.*
+Team: AIBS Cohort | SME Context: Dutch Wholesale & Distribution (e.g. sports teamwear) | Sources last appraised: October 2026
 
-IMPORTANT:
-- Output only the markdown handbook.
-- No conversational filler like "Here is the handbook".
-- Preserve all anonymized tags intact ([Company_X], [CONFIDENTIAL_AMOUNT], [Person_X]).
+## 1. The question, for this kind of SME
+Narrow down the question to regional SMEs (10-100 employees, limited IT staff, seasonal stock spikes).
+
+## 2. The translation
+Turn academic theory into plain guidance an owner can act on. Clearly separate what the firm says it needs from what empirical evidence shows it actually lacks.
+
+## 3. Illustrative use case (CRISP-DM)
+Examine the gap through all six CRISP-DM phases:
+- **Business understanding:** Operational objective (reducing pre-season stockouts).
+- **Data understanding:** Recognizing unorganized historical sales in ERP and broken size runs.
+- **Data preparation:** Time and local cleaning needed before modeling.
+- **Modelling:** Baseline rule-based logic vs. predictive ML.
+- **Evaluation:** Setting strict accuracy thresholds and human-in-the-loop review.
+- **Deployment:** Practical spreadsheet or ERP export integration.
+
+## 4. Recommended tooling
+Concrete, accessible options (no-code first, Excel Power Query, simple Python scripts) with effort and cost estimates.
+
+## 5. Responsible AI & trust
+Data ownership, local data boundaries (no private ERP records in public models), and GDPR compliance.
+
+## 6. First five steps for an owner
+Concrete Monday-morning actions (audit staff AI tools, spot-check ERP data, define a single bottleneck, consult peer SMEs).
+
+## 7. Sources
+Trace claims to field interviews and secondary reports (CBS, Eurostat, trade literature).
+
+---
+
+# Chapter template: Theme 2 — What do firms like mine use AI for, and what pays off?
+*One sentence on what this chapter helps an owner do.*
+Team: AIBS Cohort | SME Context: Regional SME Operations & Wholesale | Sources last appraised: October 2026
+
+## 1. The question, for this kind of SME
+Narrow down to practical, high-ROI AI adoption for inventory, customer communications, or forecasting.
+
+## 2. The translation
+How regional SMEs can implement AI pragmatically through 3 maturity tiers:
+- Tier 1: Off-the-shelf generative & administrative tools (low effort, quick wins).
+- Tier 2: Workflow & task automation (ERP connectors, semi-automated categorization).
+- Tier 3: Predictive operations (demand balancing and replenishment alerts).
+
+## 3. Illustrative use case (CRISP-DM)
+Walk through a concrete implementation across the 6 CRISP-DM stages:
+- **Business understanding:** Target ROI and service level improvement.
+- **Data understanding:** Transaction logs and seasonal demand cycles.
+- **Data preparation:** Merging sales history with supplier lead times.
+- **Modelling:** Time-series / decision trees vs baseline moving average.
+- **Evaluation:** Forecast error reduction and stockout reduction metrics.
+- **Deployment:** Automated weekly reorder alert generated for the warehouse manager.
+
+## 4. Recommended tooling
+Accessible tooling index, estimated setup effort in hours, and subscription costs.
+
+## 5. Responsible AI & trust
+Safeguards, bias detection, and human validation for all automated purchase suggestions.
+
+## 6. First five steps for an owner
+Five concrete steps to trial a pilot project within 30 days.
+
+## 7. Sources
+Appraised field research sources, vendor reality check, and industry benchmarks.
+
+---
+
+# Tooling index
+The accessible, mostly no-code tools referenced across the chapters, in one place: what each is for, what it costs in money and effort, and which chapter shows it in use.
+
+---
+
+# Regional ecosystem & support
+Where an owner in the region can go next: innovation centres, hubs, training, funding, and regional networks (e.g. Oost NL, VNO-NCW, HAN Applied Research).
+
+---
+
+# About this handbook
+- **Who writes it:** Students of HAN University of Applied Sciences, in teams, as the integrated task of the AIBS module and the AEL module.
+- **The quality bar:** Clarity, accuracy against appraised sources, responsible-AI coverage, and usefulness.
+- **Educational, not consultancy:** Inspirational guidance, not commercial liability.
+- **Confidentiality:** Real SME cases are anonymised.
 """
         return self._ask_ai(instructions, combined_articles_text)
 
     def markdown_to_html(self, markdown_text: str) -> str:
-        """Converts Markdown text into academic-styled HTML formatted for wkhtmltopdf."""
+        """Converts Markdown text into official HAN AIBS x AEL styled HTML without forced page breaks."""
         body_elements = []
         in_table = False
         table_rows = []
@@ -147,13 +188,13 @@ IMPORTANT:
             if not line:
                 continue
 
-            # Page break divider
+            # Nahrazení tvrdého zlomu stránky jemnou dělicí čarou
             if line == "---":
                 if in_table:
                     body_elements.append(f"<table>{''.join(table_rows)}</table>")
                     table_rows = []
                     in_table = False
-                body_elements.append('<div class="page-break"></div>')
+                body_elements.append('<div class="section-divider"></div>')
                 continue
 
             # Markdown Table parsing
@@ -175,9 +216,10 @@ IMPORTANT:
                     table_rows = []
                     in_table = False
 
-            # Headings & List formatting
+            # Nadpisy a odstavce s kompaktními mezerami
             if line.startswith("# "):
-                body_elements.append(f"<h1>{html.escape(line[2:])}</h1>")
+                title_text = line[2:]
+                body_elements.append(f'<div class="accent-bar"></div><h1>{html.escape(title_text)}</h1>')
             elif line.startswith("## "):
                 body_elements.append(f"<h2>{html.escape(line[3:])}</h2>")
             elif line.startswith("### "):
@@ -190,7 +232,12 @@ IMPORTANT:
                 body_elements.append(f"<li class='numbered'>{html.escape(clean_num)}</li>")
             else:
                 clean_text = line.replace("**", "")
-                body_elements.append(f"<p>{html.escape(clean_text)}</p>")
+                if clean_text.startswith("Orientation for an SME owner") or clean_text.startswith("The accessible, mostly no-code") or clean_text.startswith("Where an owner in the region"):
+                    body_elements.append(f"<div class='callout-box-dashed'>{html.escape(clean_text)}</div>")
+                elif clean_text.startswith("This is the handbook's template") or clean_text.startswith("A living handbook"):
+                    body_elements.append(f"<div class='callout-box-yellow'>{html.escape(clean_text)}</div>")
+                else:
+                    body_elements.append(f"<p>{html.escape(clean_text)}</p>")
 
         if in_table:
             body_elements.append(f"<table>{''.join(table_rows)}</table>")
@@ -204,102 +251,128 @@ IMPORTANT:
 <style>
     @page {{
         size: A4;
-        margin: 20mm 15mm 20mm 15mm;
+        margin: 12mm 14mm 12mm 14mm;
         @bottom-right {{
-            content: "HAN University of Applied Sciences Minor Data Driven Decision Making in Business";
+            content: "HAN University of Applied Sciences · AIBS × AEL";
             font-family: Arial, sans-serif;
-            font-size: 8pt;
+            font-size: 7.5pt;
             color: #888888;
         }}
     }}
     body {{
-        font-family: Arial, Helvetica, sans-serif;
-        color: #222222;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #111827;
         margin: 0;
         padding: 0;
-        line-height: 1.45;
-        font-size: 11pt;
+        line-height: 1.35;
+        font-size: 9.5pt;
     }}
-    .page-break {{
-        page-break-after: always;
-        height: 0;
-    }}
-    .header-tag {{
-        font-size: 9pt;
-        color: #666666;
+    .super-title {{
+        font-size: 8pt;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-        border-bottom: 1px solid #d0d7de;
-        padding-bottom: 4px;
+        color: #4b5563;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }}
+    .accent-bar {{
+        width: 32px;
+        height: 3.5px;
+        background-color: #c9d200;
+        margin: 10px 0 4px 0;
+    }}
+    .section-divider {{
+        border-top: 1px solid #e2e8f0;
+        margin: 10px 0;
     }}
     h1 {{
+        font-size: 16pt;
+        font-weight: 800;
         color: #0f172a;
-        font-size: 17pt;
-        line-height: 1.25;
-        margin-top: 6px;
-        margin-bottom: 14px;
+        margin-top: 0;
+        margin-bottom: 6px;
+        letter-spacing: -0.01em;
     }}
     h2 {{
-        color: #1e3a8a;
-        font-size: 12.5pt;
-        margin-top: 14px;
-        margin-bottom: 6px;
+        font-size: 11pt;
+        font-weight: 700;
+        color: #0f172a;
+        margin-top: 8px;
+        margin-bottom: 4px;
         border-bottom: 1px solid #e2e8f0;
-        padding-bottom: 3px;
+        padding-bottom: 2px;
     }}
     h3 {{
-        color: #334155;
-        font-size: 11pt;
-        margin-top: 10px;
-        margin-bottom: 4px;
+        font-size: 9.5pt;
+        font-weight: 700;
+        color: #1e293b;
+        margin-top: 6px;
+        margin-bottom: 2px;
     }}
     p {{
-        margin: 0 0 7px 0;
+        margin: 0 0 5px 0;
         text-align: justify;
     }}
-    ul, ol {{
-        margin-top: 4px;
+    .callout-box-yellow {{
+        background-color: #fbfbf2;
+        border: 1px solid #ececd5;
+        border-left: 3px solid #c9d200;
+        border-radius: 3px;
+        padding: 6px 10px;
         margin-bottom: 8px;
-        padding-left: 22px;
+        font-size: 9pt;
+    }}
+    .callout-box-dashed {{
+        background-color: #ffffff;
+        border: 1px dashed #cbd5e1;
+        border-radius: 3px;
+        padding: 6px 10px;
+        margin-bottom: 8px;
+        font-style: italic;
+        color: #475569;
+        font-size: 9pt;
+    }}
+    ul, ol {{
+        margin-top: 2px;
+        margin-bottom: 5px;
+        padding-left: 18px;
     }}
     li {{
-        margin-bottom: 3px;
+        margin-bottom: 2px;
         text-align: justify;
     }}
     li.numbered {{
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         list-style-type: decimal;
     }}
     table {{
         width: 100%;
         border-collapse: collapse;
-        margin: 10px 0 12px 0;
-        font-size: 9.5pt;
+        margin: 6px 0 8px 0;
+        font-size: 8.5pt;
     }}
     th {{
-        background-color: #f1f5f9;
+        background-color: #f8fafc;
         color: #0f172a;
-        font-weight: bold;
+        font-weight: 700;
         border: 1px solid #cbd5e1;
-        padding: 6px 8px;
+        padding: 4px 6px;
         text-align: left;
     }}
     td {{
         border: 1px solid #cbd5e1;
-        padding: 5px 8px;
+        padding: 4px 6px;
         vertical-align: top;
     }}
 </style>
 </head>
 <body>
-<div class="header-tag">AIBS & AEL Applied Research Handbook | AI Adoption for Regional SMEs</div>
+<div class="super-title">HAN · AIBS × AEL — COURSE SITE</div>
 {body_html}
 </body>
 </html>"""
 
     def _get_unique_pdf_path(self, base_name: str) -> Path:
-        """Generates an incremented or timestamped PDF path to prevent overwriting."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         candidate = self.output_dir / f"{base_name}_handbook_{timestamp}.pdf"
 
@@ -360,7 +433,7 @@ IMPORTANT:
 
         aggregated_text = "\n\n".join(combined_text_blocks)
 
-        print("[HandbookAgent] Synthesizing academic 2-chapter Handbook via LLM...")
+        print("[HandbookAgent] Synthesizing continuous handbook via Ollama...")
         handbook_md = self.generate_handbook(aggregated_text)
         handbook_md = re.sub(r"^(Here's|Here is).*?:\s*", "", handbook_md, flags=re.IGNORECASE).strip()
 
@@ -385,11 +458,11 @@ IMPORTANT:
             subprocess.run(
                 [
                     "wkhtmltopdf",
-                    "--quiet",
-                    "--margin-top", "18mm",
-                    "--margin-bottom", "18mm",
-                    "--margin-left", "16mm",
-                    "--margin-right", "16mm",
+                    "--enable-local-file-access",
+                    "--margin-top", "12mm",
+                    "--margin-bottom", "12mm",
+                    "--margin-left", "14mm",
+                    "--margin-right", "14mm",
                     "--footer-font-size", "8",
                     "--footer-font-name", "Arial",
                     "--footer-left", footer_text,
